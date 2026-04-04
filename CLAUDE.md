@@ -1,0 +1,58 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## 명령어
+
+```bash
+npm run dev              # 개발 모드 실행 (tsx watch, 자동 재시작)
+npm run build            # TypeScript 컴파일 → dist/
+npm start                # 프로덕션 실행 (빌드 후 사용)
+npm run deploy-commands  # Discord 슬래시 커맨드 등록 (길드 스코프)
+npm run lint             # ESLint 검사
+npm run lint:fix         # ESLint 자동 수정
+npm run typecheck        # tsc --noEmit (타입 검사만)
+npm run format:check     # Prettier 포맷 검사
+```
+
+## 아키텍처
+
+ESM 기반 Node.js + TypeScript 프로젝트. `"type": "module"` 이므로 모든 내부 import에 `.js` 확장자를 사용한다 (`.ts` 파일이더라도).
+
+### 시작 흐름
+
+`src/index.ts` → DB 초기화 → 커맨드/이벤트 동적 로딩 → Discord 로그인
+
+### 동적 로딩 패턴
+
+`src/loaders/commands.ts`와 `src/loaders/events.ts`가 해당 디렉토리의 파일을 자동으로 읽어 등록한다. **새 커맨드나 이벤트는 파일만 추가하면 자동 로드된다.**
+
+- 커맨드: `src/commands/*.ts` — `Command` 인터페이스의 `default export` 필요
+- 이벤트: `src/events/*.ts` — `Event` 인터페이스의 `default export` 필요
+
+### 주요 타입 (`src/types/index.ts`)
+
+```ts
+interface Command {
+  data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder;
+  execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
+}
+
+interface Event {
+  name: string;
+  once?: boolean;
+  execute: (...args: any[]) => Promise<void> | void;
+}
+```
+
+### 환경 변수
+
+`src/config.ts`가 단일 진입점. `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_GUILD_ID`는 시작 시 필수 검증. Claude/GitHub 키는 선택적.
+
+### DB
+
+`src/db/index.ts`에서 싱글톤 SQLite 인스턴스 관리. `getDatabase()`로 접근. 마이그레이션은 `src/db/schema.ts`의 `runMigrations()`에 추가. 레포지토리는 `src/db/repositories/`에 작성.
+
+### 슬래시 커맨드 등록
+
+커맨드를 추가하거나 변경한 뒤 `npm run deploy-commands`를 실행해야 Discord에 반영된다. 길드 스코프라 즉시 적용된다.
