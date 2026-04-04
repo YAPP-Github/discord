@@ -1,0 +1,38 @@
+{
+  "name": "yapp-slack",
+  "version": "0.1.0",
+  "description": "YAPP Discord Bot",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write 'src/**/*.ts'",
+    "deploy-commands": "tsx src/deploy-commands.ts"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.0",
+    "better-sqlite3": "^11.0.0",
+    "@anthropic-ai/sdk": "^0.82.0",
+    "node-cron": "^3.0.0",
+    "dotenv": "^16.5.0",
+    "@octokit/rest": "^21.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^22.0.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node-cron": "^3.0.11",
+    "eslint": "^9.0.0",
+    "@eslint/js": "^9.0.0",
+    "typescript-eslint": "^8.0.0",
+    "prettier": "^3.5.0"
+  }
+}
