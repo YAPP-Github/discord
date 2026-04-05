@@ -80,6 +80,11 @@ src/
 3. 변경사항을 커밋합니다: `git commit -m "feat: 기능 설명"`
 4. PR을 생성합니다
 
+## 문서
+
+- **기술 문서** (아키텍처, 기능 설계): [`docs/`](docs/)
+- **운영 인수인계 문서**: [Notion](https://www.notion.so/3395a562591281fd9c46eef98f9b66b4)
+
 ## 라이선스
 
 MIT
