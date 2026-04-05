@@ -1,3 +1,7 @@
+---
+description: 기능별 LLD(Low-Level Design) 문서를 작성하고 CLAUDE.md 인덱스를 업데이트한다
+---
+
 # LLD 작성 스킬
 
 새 기능의 LLD(Low-Level Design) 문서를 작성한다.

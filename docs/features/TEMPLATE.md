@@ -1,7 +1,7 @@
 # LLD — [기능명]
 
 > **관련 이슈**: #
-> **상태**: draft | review | approved
+> **상태**: draft | review | approved | implemented
 > **최종 수정**: YYYY-MM-DD
 
 ---

@@ -66,8 +66,12 @@ interface Event {
 ### LLD
 기능 단위 상세 설계. 새 기능 추가 시 `docs/features/TEMPLATE.md`를 복사해 작성한다.
 구현 전 LLD를 먼저 작성하고, 완료 후 아래 목록에 추가한다.
+기능 관련 작업 시 해당 LLD의 **상태** 필드를 확인한다 (`draft` | `review` | `approved` | `implemented`).
 
-- (아직 작성된 LLD 없음)
+- [Ping 커맨드](docs/features/ping.md)
+- [CI 파이프라인](docs/features/ci-pipeline.md)
+- [Discord 커맨드 자동 배포](docs/features/deploy-commands.md)
+- [Claude API 서비스](docs/features/claude-service.md)
 
 ### ADR
 아키텍처 의사결정 기록. 큰 기술적 결정이 있을 때만 작성한다.
