@@ -56,3 +56,19 @@ interface Event {
 ### 슬래시 커맨드 등록
 
 커맨드를 추가하거나 변경한 뒤 `npm run deploy-commands`를 실행해야 Discord에 반영된다. 길드 스코프라 즉시 적용된다.
+
+## 문서
+
+### HLD
+전체 시스템 아키텍처, 컴포넌트 관계, 기술 스택을 기술한다.
+- [`docs/HLD.md`](docs/HLD.md)
+
+### LLD
+기능 단위 상세 설계. 새 기능 추가 시 `docs/features/TEMPLATE.md`를 복사해 작성한다.
+구현 전 LLD를 먼저 작성하고, 완료 후 아래 목록에 추가한다.
+
+- (아직 작성된 LLD 없음)
+
+### ADR
+아키텍처 의사결정 기록. 큰 기술적 결정이 있을 때만 작성한다.
+- [`docs/adr/`](docs/adr/)

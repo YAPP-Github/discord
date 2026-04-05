@@ -19,6 +19,9 @@
 - [ ] 로컬에서 정상 동작을 확인했습니다
 - [ ] `npm run lint` 통과
 - [ ] `npm run typecheck` 통과
+- [ ] 관련 문서 업데이트 (`docs/`) 또는 해당 없음
+- [ ] CLAUDE.md 업데이트 필요 여부 확인
+- [ ] `npm run deploy-commands` 실행 필요 여부 확인 (커맨드 추가/변경 시)
 
 ## 관련 이슈
 
