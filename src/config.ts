@@ -1,4 +1,6 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+const envFile = process.env.NODE_ENV === "prod" ? ".env.prod" : ".env.local";
+dotenv.config({ path: envFile });
 
 function required(key: string): string {
   const value = process.env[key];

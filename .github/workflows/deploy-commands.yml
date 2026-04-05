@@ -1,0 +1,32 @@
+name: Deploy Discord Commands
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/commands/**'
+  workflow_dispatch:
+
+jobs:
+  deploy-commands:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy commands
+        run: npm run deploy-commands:prod
+        env:
+          NODE_ENV: prod
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
