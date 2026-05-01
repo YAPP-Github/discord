@@ -74,13 +74,19 @@ RAG 파이프라인의 벡터 DB(Pinecone, Weaviate, Chroma 등)가 미정이므
 npm run fetch-messages
   → Discord REST API: GET /guilds/{id}/channels
   → 채널 타입/이름 필터링
-  → 각 채널:
-      → GET /channels/{id}/messages (100개씩 페이지네이션)
-      → GET /guilds/{id}/threads/active (전체 활성 쓰레드)
+  → GET /guilds/{id}/threads/active (전체 활성 쓰레드, 한 번)
+  → 채널 워커 풀 (동시 3개):
+      → GET /channels/{id}/messages (100개씩 페이지네이션, 페이지 사이 500ms)
       → GET /channels/{id}/threads/archived/public (아카이브 쓰레드)
       → 각 쓰레드: GET /channels/{thread.id}/messages
   → data/export/ 에 JSON 저장
 ```
+
+**병렬 정책**:
+- 채널 단위 동시성 3 (`CHANNEL_CONCURRENCY`)
+- 채널 내 페이지네이션은 cursor 기반이라 순차 강제
+- Discord rate limit 은 라우트+리소스(채널 ID)별 버킷이라 다른 채널 동시 호출 안전
+- discord.js REST 가 글로벌 rate limit 자동 관리 → 429 시 자동 retry
 
 ---
 

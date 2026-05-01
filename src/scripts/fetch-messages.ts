@@ -187,8 +187,33 @@ interface ChannelSummary {
 
 // ---- Utilities ----
 
+const CHANNEL_CONCURRENCY = 3;
+const WORKER_STAGGER_MS = 100;
+
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+async function processWithLimit<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIdx = 0;
+  const workers = Array.from(
+    { length: Math.min(limit, items.length) },
+    async (_, w) => {
+      if (w > 0) await delay(WORKER_STAGGER_MS * w);
+      while (true) {
+        const i = nextIdx++;
+        if (i >= items.length) return;
+        results[i] = await fn(items[i]);
+      }
+    },
+  );
+  await Promise.all(workers);
+  return results;
 }
 
 function formatDuration(ms: number): string {
@@ -366,15 +391,14 @@ async function main() {
   mkdirSync(join(EXPORT_DIR, "threads"), { recursive: true });
 
   const overallStart = Date.now();
-  const channelSummaries: ChannelSummary[] = [];
 
-  for (const ch of channels) {
-    logger.info(`\n[${ch.name}]`);
+  async function fetchChannel(ch: RawChannel): Promise<ChannelSummary> {
+    const tag = `[${ch.name}]`;
+    logger.info(`${tag} start`);
     const channelStart = Date.now();
     let messageCount = 0;
     let threadMessageCount = 0;
 
-    // Channel messages (forum channels have no direct messages)
     if (ch.type !== GUILD_FORUM) {
       try {
         const msgs = await paginateMessages(rest, ch.id, ch.id, ch.name);
@@ -383,13 +407,12 @@ async function main() {
           join(EXPORT_DIR, "channels", `${sanitize(ch.name)}.json`),
           JSON.stringify(msgs, null, 2),
         );
-        logger.info(`  ${msgs.length} messages`);
+        logger.info(`${tag} ${msgs.length} messages`);
       } catch (err) {
-        logger.error(`  Failed to fetch messages: ${err}`);
+        logger.error(`${tag} failed to fetch messages: ${err}`);
       }
     }
 
-    // Threads: active + archived
     const activeForChannel = activeRes.threads.filter(
       (t) => t.parent_id === ch.id,
     );
@@ -397,14 +420,14 @@ async function main() {
     try {
       archivedThreads = await fetchArchivedThreads(rest, ch.id);
     } catch (err) {
-      logger.error(`  Failed to fetch archived threads: ${err}`);
+      logger.error(`${tag} failed to fetch archived threads: ${err}`);
     }
 
     const allThreads = [...activeForChannel, ...archivedThreads].sort((a, b) =>
       compareSnowflake(a.id, b.id),
     );
     logger.info(
-      `  ${allThreads.length} threads (${activeForChannel.length} active, ${archivedThreads.length} archived)`,
+      `${tag} ${allThreads.length} threads (${activeForChannel.length} active, ${archivedThreads.length} archived)`,
     );
 
     if (allThreads.length > 0) {
@@ -419,10 +442,7 @@ async function main() {
             thread.id,
             ch.id,
             ch.name,
-            {
-              id: thread.id,
-              name: thread.name,
-            },
+            { id: thread.id, name: thread.name },
           );
           threadMessageCount += threadMsgs.length;
           writeFileSync(
@@ -434,27 +454,31 @@ async function main() {
             ),
             JSON.stringify(threadMsgs, null, 2),
           );
-          logger.info(`    [${thread.name}] ${threadMsgs.length} messages`);
         } catch (err) {
-          logger.error(`    Failed to fetch thread [${thread.name}]: ${err}`);
+          logger.error(`${tag} failed thread [${thread.name}]: ${err}`);
         }
       }
     }
 
     const channelDuration = Date.now() - channelStart;
-    logger.info(`  elapsed: ${formatDuration(channelDuration)}`);
+    logger.info(`${tag} done in ${formatDuration(channelDuration)}`);
 
-    channelSummaries.push({
+    return {
       id: ch.id,
       name: ch.name,
       message_count: messageCount,
       thread_count: allThreads.length,
       thread_message_count: threadMessageCount,
       duration_ms: channelDuration,
-    });
-
-    await delay(1000);
+    };
   }
+
+  logger.info(`Fetching with concurrency=${CHANNEL_CONCURRENCY}`);
+  const channelSummaries = await processWithLimit(
+    channels,
+    CHANNEL_CONCURRENCY,
+    fetchChannel,
+  );
 
   channelSummaries.sort((a, b) => compareSnowflake(a.id, b.id));
 
