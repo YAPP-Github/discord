@@ -109,6 +109,7 @@ data/export/
   "author_name": "username",
   "content": "메시지 본문",
   "timestamp": "ISO 8601",
+  "reply_to_id": "snowflake (답장 메시지만)",
   "reactions": {
     "positive_count": 5,
     "negative_count": 0,
@@ -116,9 +117,21 @@ data/export/
       { "emoji": "👍", "count": 5, "sentiment": "positive" }
     ]
   },
-  "attachments": ["https://cdn.discordapp.com/..."]
+  "attachments": ["https://cdn.discordapp.com/..."],
+  "embeds": [
+    {
+      "title": "...",
+      "description": "...",
+      "url": "...",
+      "author": "...",
+      "footer": "...",
+      "fields": [{ "name": "...", "value": "..." }]
+    }
+  ]
 }
 ```
+
+각 필드는 값이 있을 때만 포함된다 (`reply_to_id`, `embeds` 등 optional).
 
 ---
 

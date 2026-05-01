@@ -97,6 +97,20 @@ interface RawAttachment {
   url: string;
 }
 
+interface RawEmbedField {
+  name: string;
+  value: string;
+}
+
+interface RawEmbed {
+  title?: string;
+  description?: string;
+  url?: string;
+  fields?: RawEmbedField[];
+  author?: { name: string };
+  footer?: { text: string };
+}
+
 interface RawMessage {
   id: string;
   content: string;
@@ -104,6 +118,10 @@ interface RawMessage {
   timestamp: string;
   reactions?: RawReaction[];
   attachments: RawAttachment[];
+  embeds?: RawEmbed[];
+  message_reference?: {
+    message_id?: string;
+  };
 }
 
 interface RawChannel {
@@ -129,6 +147,15 @@ interface ReactionDetail {
   sentiment: "positive" | "negative" | "neutral";
 }
 
+interface EmbedRecord {
+  title?: string;
+  description?: string;
+  url?: string;
+  author?: string;
+  footer?: string;
+  fields?: Array<{ name: string; value: string }>;
+}
+
 interface MessageRecord {
   id: string;
   channel_id: string;
@@ -139,12 +166,14 @@ interface MessageRecord {
   author_name: string;
   content: string;
   timestamp: string;
+  reply_to_id?: string;
   reactions: {
     positive_count: number;
     negative_count: number;
     details: ReactionDetail[];
   };
   attachments: string[];
+  embeds?: EmbedRecord[];
 }
 
 interface ChannelSummary {
@@ -196,6 +225,25 @@ function compareSnowflake(a: string, b: string): number {
   return ba < bb ? -1 : ba > bb ? 1 : 0;
 }
 
+function processEmbeds(raw?: RawEmbed[]): EmbedRecord[] | undefined {
+  if (!raw?.length) return undefined;
+  const records = raw
+    .map((e) => {
+      const rec: EmbedRecord = {};
+      if (e.title) rec.title = e.title;
+      if (e.description) rec.description = e.description;
+      if (e.url) rec.url = e.url;
+      if (e.author?.name) rec.author = e.author.name;
+      if (e.footer?.text) rec.footer = e.footer.text;
+      if (e.fields?.length) {
+        rec.fields = e.fields.map((f) => ({ name: f.name, value: f.value }));
+      }
+      return rec;
+    })
+    .filter((r) => Object.keys(r).length > 0);
+  return records.length > 0 ? records : undefined;
+}
+
 // ---- Core fetch functions ----
 
 async function paginateMessages(
@@ -234,6 +282,11 @@ async function paginateMessages(
         rec.thread_id = thread.id;
         rec.thread_name = thread.name;
       }
+      if (m.message_reference?.message_id) {
+        rec.reply_to_id = m.message_reference.message_id;
+      }
+      const embeds = processEmbeds(m.embeds);
+      if (embeds) rec.embeds = embeds;
       records.push(rec);
     }
 
