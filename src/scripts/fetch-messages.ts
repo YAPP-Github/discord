@@ -179,13 +179,21 @@ function processReactions(raw?: RawReaction[]): MessageRecord["reactions"] {
     return { positive_count: 0, negative_count: 0, details: [] };
   let pos = 0;
   let neg = 0;
-  const details: ReactionDetail[] = raw.map((r) => {
-    const sentiment = classifyEmoji(r.emoji.name);
-    if (sentiment === "positive") pos += r.count;
-    else if (sentiment === "negative") neg += r.count;
-    return { emoji: r.emoji.name, count: r.count, sentiment };
-  });
+  const details: ReactionDetail[] = raw
+    .map((r) => {
+      const sentiment = classifyEmoji(r.emoji.name);
+      if (sentiment === "positive") pos += r.count;
+      else if (sentiment === "negative") neg += r.count;
+      return { emoji: r.emoji.name, count: r.count, sentiment };
+    })
+    .sort((a, b) => a.emoji.localeCompare(b.emoji));
   return { positive_count: pos, negative_count: neg, details };
+}
+
+function compareSnowflake(a: string, b: string): number {
+  const ba = BigInt(a);
+  const bb = BigInt(b);
+  return ba < bb ? -1 : ba > bb ? 1 : 0;
 }
 
 // ---- Core fetch functions ----
@@ -220,7 +228,7 @@ async function paginateMessages(
         content: m.content,
         timestamp: m.timestamp,
         reactions: processReactions(m.reactions),
-        attachments: m.attachments.map((a) => a.url),
+        attachments: m.attachments.map((a) => a.url).sort(),
       };
       if (thread) {
         rec.thread_id = thread.id;
@@ -233,6 +241,7 @@ async function paginateMessages(
     await delay(500);
   }
 
+  records.sort((a, b) => compareSnowflake(a.id, b.id));
   return records;
 }
 
@@ -325,7 +334,9 @@ async function main() {
       logger.error(`  Failed to fetch archived threads: ${err}`);
     }
 
-    const allThreads = [...activeForChannel, ...archivedThreads];
+    const allThreads = [...activeForChannel, ...archivedThreads].sort((a, b) =>
+      compareSnowflake(a.id, b.id),
+    );
     logger.info(
       `  ${allThreads.length} threads (${activeForChannel.length} active, ${archivedThreads.length} archived)`,
     );
@@ -374,6 +385,8 @@ async function main() {
 
     await delay(1000);
   }
+
+  channelSummaries.sort((a, b) => compareSnowflake(a.id, b.id));
 
   const summary = {
     fetched_at: new Date().toISOString(),
