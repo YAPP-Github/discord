@@ -21,7 +21,8 @@
     "deploy-commands": "NODE_ENV=local tsx src/deploy-commands.ts",
     "deploy-commands:prod": "NODE_ENV=prod tsx src/deploy-commands.ts",
     "fetch-messages": "NODE_ENV=local tsx src/scripts/fetch-messages.ts",
-    "fetch-messages:prod": "NODE_ENV=prod tsx src/scripts/fetch-messages.ts"
+    "fetch-messages:prod": "NODE_ENV=prod tsx src/scripts/fetch-messages.ts",
+    "consolidate-messages": "tsx src/scripts/consolidate-messages.ts"
   },
   "lint-staged": {
     "src/**/*.ts": [
