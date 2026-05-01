@@ -182,12 +182,23 @@ interface ChannelSummary {
   message_count: number;
   thread_count: number;
   thread_message_count: number;
+  duration_ms: number;
 }
 
 // ---- Utilities ----
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+function formatDuration(ms: number): string {
+  const totalSec = Math.round(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
 }
 
 function sanitize(name: string): string {
@@ -354,10 +365,12 @@ async function main() {
   mkdirSync(join(EXPORT_DIR, "channels"), { recursive: true });
   mkdirSync(join(EXPORT_DIR, "threads"), { recursive: true });
 
+  const overallStart = Date.now();
   const channelSummaries: ChannelSummary[] = [];
 
   for (const ch of channels) {
     logger.info(`\n[${ch.name}]`);
+    const channelStart = Date.now();
     let messageCount = 0;
     let threadMessageCount = 0;
 
@@ -428,12 +441,16 @@ async function main() {
       }
     }
 
+    const channelDuration = Date.now() - channelStart;
+    logger.info(`  elapsed: ${formatDuration(channelDuration)}`);
+
     channelSummaries.push({
       id: ch.id,
       name: ch.name,
       message_count: messageCount,
       thread_count: allThreads.length,
       thread_message_count: threadMessageCount,
+      duration_ms: channelDuration,
     });
 
     await delay(1000);
@@ -441,8 +458,11 @@ async function main() {
 
   channelSummaries.sort((a, b) => compareSnowflake(a.id, b.id));
 
+  const totalDurationMs = Date.now() - overallStart;
   const summary = {
     fetched_at: new Date().toISOString(),
+    duration_ms: totalDurationMs,
+    duration_human: formatDuration(totalDurationMs),
     channels: channelSummaries,
     total_messages: channelSummaries.reduce((s, c) => s + c.message_count, 0),
     total_threads: channelSummaries.reduce((s, c) => s + c.thread_count, 0),
@@ -461,6 +481,7 @@ async function main() {
   logger.info(`  Messages:        ${summary.total_messages}`);
   logger.info(`  Threads:         ${summary.total_threads}`);
   logger.info(`  Thread messages: ${summary.total_thread_messages}`);
+  logger.info(`  Total elapsed:   ${summary.duration_human}`);
   logger.info(`  Output: ${EXPORT_DIR}`);
 }
 
