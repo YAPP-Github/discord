@@ -4,6 +4,7 @@ import {
   writeFileSync,
   existsSync,
   mkdirSync,
+  rmSync,
   statSync,
 } from "node:fs";
 import { join, dirname, basename } from "node:path";
@@ -198,6 +199,12 @@ function main() {
   if (!existsSync(SRC_DIR)) {
     logger.error(`Source dir not found: ${SRC_DIR}`);
     process.exit(1);
+  }
+
+  // Wipe & rebuild for full idempotency (consolidated/ 는 파생 데이터)
+  if (existsSync(OUT_DIR)) {
+    rmSync(OUT_DIR, { recursive: true, force: true });
+    logger.info(`Cleared existing output: ${OUT_DIR}`);
   }
   mkdirSync(OUT_DIR, { recursive: true });
 
