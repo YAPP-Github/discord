@@ -74,6 +74,13 @@ interface Event {
 - [Claude API 서비스](docs/features/claude-service.md)
 - [Discord 메시지 수집 스크립트](docs/features/fetch-messages.md)
 - [채널·쓰레드 통합 스크립트](docs/features/consolidate-messages.md)
+- [YAPP 자동화 플랫폼 구현 계획](docs/features/automation-platform-plan.md)
+  - [Phase 1: Layered Architecture 기반 자동화 셋업](docs/features/automation-foundation-setup.md)
+  - [Phase 2: GitHub Organization 자동화](docs/features/automation-github-org.md)
+  - [Phase 3: 주기 공지 스케줄러](docs/features/automation-scheduled-notice.md)
+  - [Phase 4: Google Form → Discord/GitHub 프로비저닝](docs/features/automation-google-form-provisioning.md)
+  - [Phase 5: Google Calendar 연동](docs/features/automation-google-calendar.md)
+  - [Phase 6: 자연어 인터페이스 (LLM 툴 콜링)](docs/features/automation-llm-natural-language.md)
 
 ### ADR
 아키텍처 의사결정 기록. 큰 기술적 결정이 있을 때만 작성한다.
