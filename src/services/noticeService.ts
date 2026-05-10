@@ -29,6 +29,20 @@ export function toggle(id: number): repo.ScheduledNoticeRow | null {
   return repo.findById(id);
 }
 
+export function setEnabled(
+  id: number,
+  enabled: boolean,
+): repo.ScheduledNoticeRow | null {
+  const row = repo.findById(id);
+  if (!row) return null;
+  repo.setEnabled(id, enabled);
+  return repo.findById(id);
+}
+
+export function disableAll(): number {
+  return repo.disableAll();
+}
+
 export async function dispatchOne(
   client: BotClient,
   notice: repo.ScheduledNoticeRow,

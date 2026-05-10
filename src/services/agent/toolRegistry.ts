@@ -103,7 +103,8 @@ export const tools: AgentToolDef[] = [
   },
   {
     name: "toggle_notice",
-    description: "Enable or disable an existing notice by id",
+    description:
+      "Flip the enabled flag of an existing notice by id. Prefer set_notice_enabled when you want a specific on/off state.",
     input_schema: {
       type: "object",
       properties: {
@@ -115,6 +116,40 @@ export const tools: AgentToolDef[] = [
       const row = noticeService.toggle(Number(args.id));
       if (!row) throw new Error(`notice ${args.id} not found`);
       return row;
+    },
+  },
+  {
+    name: "set_notice_enabled",
+    description:
+      "Set a notice's enabled state to a specific value (true=on, false=off). Use this instead of toggle_notice when the desired state is known.",
+    input_schema: {
+      type: "object",
+      properties: {
+        id: { type: "number" },
+        enabled: { type: "boolean" },
+      },
+      required: ["id", "enabled"],
+    },
+    handler: async (_client, args) => {
+      const row = noticeService.setEnabled(
+        Number(args.id),
+        Boolean(args.enabled),
+      );
+      if (!row) throw new Error(`notice ${args.id} not found`);
+      return row;
+    },
+  },
+  {
+    name: "disable_all_notices",
+    description:
+      "Disable every currently enabled notice in a single call. Use when the user asks to stop, pause, or turn off all schedulers/notices at once.",
+    input_schema: {
+      type: "object",
+      properties: {},
+    },
+    handler: async () => {
+      const count = noticeService.disableAll();
+      return { disabled_count: count };
     },
   },
   {

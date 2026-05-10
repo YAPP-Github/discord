@@ -64,6 +64,14 @@ export function setEnabled(id: number, enabled: boolean): void {
   );
 }
 
+export function disableAll(): number {
+  const db = getDatabase();
+  const info = db
+    .prepare(`UPDATE scheduled_notice SET enabled = 0 WHERE enabled = 1`)
+    .run();
+  return info.changes;
+}
+
 export function markRun(id: number): void {
   const db = getDatabase();
   db.prepare(

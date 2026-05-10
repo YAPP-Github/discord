@@ -24,6 +24,8 @@ vi.mock("../../src/services/noticeService.js", () => ({
   create: vi.fn().mockReturnValue({ id: 1 }),
   list: vi.fn(),
   toggle: vi.fn(),
+  setEnabled: vi.fn().mockReturnValue({ id: 1, enabled: 0 }),
+  disableAll: vi.fn().mockReturnValue(3),
   dispatchOne: vi.fn(),
 }));
 
@@ -37,9 +39,17 @@ vi.mock("../../src/services/calendarService.js", () => ({
 import * as agentService from "../../src/services/agentService.js";
 import * as githubService from "../../src/services/githubOrgService.js";
 import * as channelService from "../../src/services/discordChannelService.js";
+import * as noticeService from "../../src/services/noticeService.js";
 import type { BotClient } from "../../src/client.js";
 
 const FAKE_CLIENT = {} as BotClient;
+
+function terminatingResponse(text = "완료했습니다.") {
+  return {
+    stop_reason: "end_turn",
+    content: [{ type: "text", text }],
+  };
+}
 
 describe("agentService.run", () => {
   beforeEach(() => {
@@ -49,6 +59,7 @@ describe("agentService.run", () => {
 
   it("dispatches LLM tool_use blocks to registered handlers", async () => {
     messagesCreate.mockResolvedValueOnce({
+      stop_reason: "tool_use",
       content: [
         { type: "text", text: "스터디방 + 초대" },
         {
@@ -65,6 +76,7 @@ describe("agentService.run", () => {
         },
       ],
     });
+    messagesCreate.mockResolvedValueOnce(terminatingResponse());
 
     const result = await agentService.run(FAKE_CLIENT, "u1", "스터디방 만들어줘");
 
@@ -85,6 +97,7 @@ describe("agentService.run", () => {
       new Error("rate limit"),
     );
     messagesCreate.mockResolvedValueOnce({
+      stop_reason: "tool_use",
       content: [
         {
           type: "tool_use",
@@ -100,6 +113,7 @@ describe("agentService.run", () => {
         },
       ],
     });
+    messagesCreate.mockResolvedValueOnce(terminatingResponse());
 
     const result = await agentService.run(FAKE_CLIENT, "u1", "초대 두명");
     expect(result.status).toBe("failed");
@@ -107,8 +121,52 @@ describe("agentService.run", () => {
     expect(result.tool_results[1].status).toBe("ok");
   });
 
+  it("routes disable_all_notices tool_use to noticeService.disableAll", async () => {
+    messagesCreate.mockResolvedValueOnce({
+      stop_reason: "tool_use",
+      content: [
+        {
+          type: "tool_use",
+          id: "t1",
+          name: "disable_all_notices",
+          input: {},
+        },
+      ],
+    });
+    messagesCreate.mockResolvedValueOnce(terminatingResponse());
+
+    const result = await agentService.run(FAKE_CLIENT, "u1", "스케줄러 다 꺼줘");
+    expect(result.status).toBe("executed");
+    expect(noticeService.disableAll).toHaveBeenCalledTimes(1);
+    expect(result.tool_results[0]).toMatchObject({
+      tool: "disable_all_notices",
+      status: "ok",
+      detail: { disabled_count: 3 },
+    });
+  });
+
+  it("routes set_notice_enabled tool_use to noticeService.setEnabled", async () => {
+    messagesCreate.mockResolvedValueOnce({
+      stop_reason: "tool_use",
+      content: [
+        {
+          type: "tool_use",
+          id: "t1",
+          name: "set_notice_enabled",
+          input: { id: 7, enabled: false },
+        },
+      ],
+    });
+    messagesCreate.mockResolvedValueOnce(terminatingResponse());
+
+    const result = await agentService.run(FAKE_CLIENT, "u1", "공지 7 꺼줘");
+    expect(result.status).toBe("executed");
+    expect(noticeService.setEnabled).toHaveBeenCalledWith(7, false);
+  });
+
   it("records unknown tool as failed without crashing", async () => {
     messagesCreate.mockResolvedValueOnce({
+      stop_reason: "tool_use",
       content: [
         {
           type: "tool_use",
@@ -118,11 +176,103 @@ describe("agentService.run", () => {
         },
       ],
     });
+    messagesCreate.mockResolvedValueOnce(terminatingResponse());
+
     const result = await agentService.run(FAKE_CLIENT, "u1", "bogus");
     expect(result.status).toBe("failed");
     expect(result.tool_results[0]).toMatchObject({
       tool: "bogus_tool",
       status: "failed",
     });
+  });
+
+  it("loops across turns: list result feeds the next tool_use", async () => {
+    vi.mocked(noticeService.list).mockReturnValueOnce([
+      {
+        id: 11,
+        title: "a",
+        content: "a",
+        cron_expr: "* * * * *",
+        channel_id: "1",
+        enabled: 1,
+        last_run_at: null,
+        created_at: "",
+      },
+      {
+        id: 22,
+        title: "b",
+        content: "b",
+        cron_expr: "* * * * *",
+        channel_id: "1",
+        enabled: 1,
+        last_run_at: null,
+        created_at: "",
+      },
+    ]);
+
+    messagesCreate.mockResolvedValueOnce({
+      stop_reason: "tool_use",
+      content: [
+        { type: "tool_use", id: "t1", name: "list_notices", input: {} },
+      ],
+    });
+    messagesCreate.mockResolvedValueOnce({
+      stop_reason: "tool_use",
+      content: [
+        {
+          type: "tool_use",
+          id: "t2",
+          name: "set_notice_enabled",
+          input: { id: 11, enabled: false },
+        },
+        {
+          type: "tool_use",
+          id: "t3",
+          name: "set_notice_enabled",
+          input: { id: 22, enabled: false },
+        },
+      ],
+    });
+    messagesCreate.mockResolvedValueOnce(terminatingResponse("2개 비활성화 완료"));
+
+    const result = await agentService.run(
+      FAKE_CLIENT,
+      "u1",
+      "현재 돌고 있는 스케줄러 모두 꺼줘",
+    );
+
+    expect(messagesCreate).toHaveBeenCalledTimes(3);
+    expect(result.status).toBe("executed");
+    expect(result.tool_results.map((r) => r.tool)).toEqual([
+      "list_notices",
+      "set_notice_enabled",
+      "set_notice_enabled",
+    ]);
+    expect(noticeService.setEnabled).toHaveBeenNthCalledWith(1, 11, false);
+    expect(noticeService.setEnabled).toHaveBeenNthCalledWith(2, 22, false);
+    expect(result.summary).toBe("2개 비활성화 완료");
+  });
+
+  it("marks status failed when iteration limit is hit while still calling tools", async () => {
+    const toolUseTurn = {
+      stop_reason: "tool_use",
+      content: [
+        {
+          type: "tool_use",
+          id: "t",
+          name: "list_notices",
+          input: {},
+        },
+      ],
+    };
+    vi.mocked(noticeService.list).mockReturnValue([]);
+    for (let i = 0; i < 5; i++) {
+      messagesCreate.mockResolvedValueOnce(toolUseTurn);
+    }
+
+    const result = await agentService.run(FAKE_CLIENT, "u1", "loop");
+    expect(messagesCreate).toHaveBeenCalledTimes(5);
+    expect(result.status).toBe("failed");
+    expect(result.summary).toContain("최대 반복");
   });
 });

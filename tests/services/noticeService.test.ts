@@ -59,6 +59,54 @@ describe("noticeService", () => {
     expect(toggledAgain?.enabled).toBe(1);
   });
 
+  it("setEnabled is idempotent for an absolute target state", () => {
+    const row = noticeService.create({
+      title: "x",
+      content: "x",
+      cron_expr: "* * * * *",
+      channel_id: "1",
+    });
+    const off1 = noticeService.setEnabled(row.id, false);
+    const off2 = noticeService.setEnabled(row.id, false);
+    expect(off1?.enabled).toBe(0);
+    expect(off2?.enabled).toBe(0);
+    const on = noticeService.setEnabled(row.id, true);
+    expect(on?.enabled).toBe(1);
+  });
+
+  it("setEnabled returns null for unknown id", () => {
+    expect(noticeService.setEnabled(9999, false)).toBeNull();
+  });
+
+  it("disableAll turns off every enabled notice and reports the count", () => {
+    noticeService.create({
+      title: "a",
+      content: "a",
+      cron_expr: "* * * * *",
+      channel_id: "1",
+    });
+    const b = noticeService.create({
+      title: "b",
+      content: "b",
+      cron_expr: "* * * * *",
+      channel_id: "1",
+    });
+    noticeService.create({
+      title: "c",
+      content: "c",
+      cron_expr: "* * * * *",
+      channel_id: "1",
+    });
+    noticeService.setEnabled(b.id, false);
+
+    const count = noticeService.disableAll();
+    expect(count).toBe(2);
+    const all = noticeService.list();
+    expect(all.every((r) => r.enabled === 0)).toBe(true);
+
+    expect(noticeService.disableAll()).toBe(0);
+  });
+
   it("dispatches via discord channel service", async () => {
     const row = noticeService.create({
       title: "Hello",
