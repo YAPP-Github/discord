@@ -1,9 +1,9 @@
 import express, { type Express } from "express";
 import { logger } from "../utils/logger.js";
+import { registerGoogleFormWebhook } from "./googleFormWebhook.js";
 import type { BotClient } from "../client.js";
 
 export function createHttpServer(client: BotClient): Express {
-  void client;
   const app = express();
 
   // Capture raw body for HMAC signature verification.
@@ -18,6 +18,8 @@ export function createHttpServer(client: BotClient): Express {
   app.get("/healthz", (_req, res) => {
     res.json({ status: "ok" });
   });
+
+  registerGoogleFormWebhook(app, client);
 
   return app;
 }
