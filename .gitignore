@@ -7,3 +7,4 @@ data/export/
 *.log
 .DS_Store
 .mcp.json
+.idea/
