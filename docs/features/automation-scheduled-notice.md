@@ -1,19 +1,20 @@
 ---
 title: 주기 공지 스케줄러
-status: draft
-last_updated: 2026-05-08
+status: implemented
+last_updated: 2026-05-10
 owner: taehyung.koo@musinsa.com
 parent: docs/features/automation-platform-plan.md
 phase: 3
 required_credentials:
   - DISCORD_TOKEN
   - DISCORD_GUILD_ID
+  - ADMIN_API_TOKEN  # /api/notices 엔드포인트 사용 시
 ---
 
 # LLD — 주기 공지 스케줄러
 
-> **상태**: draft
-> **최종 수정**: 2026-05-08
+> **상태**: implemented
+> **최종 수정**: 2026-05-10
 
 ---
 
@@ -26,7 +27,11 @@ required_credentials:
 - 운영자가 코드 수정 없이 공지 추가/수정/비활성화 가능
 - 다양한 외부 이벤트(Webhook)도 동일 발송 경로로 통합
 
-## 슬래시 커맨드
+## 진입점
+
+같은 `noticeService`를 세 가지 인터페이스가 공유한다.
+
+### 1. Discord 슬래시 커맨드
 
 | 커맨드 | 설명 | 권한 |
 |--------|------|------|
@@ -34,12 +39,35 @@ required_credentials:
 | `/notice list` | 활성 공지 목록 | 운영진 |
 | `/notice toggle <id>` | 활성/비활성 전환 | 운영진 |
 
+### 2. HTTP Admin API
+
+`Authorization: Bearer ${ADMIN_API_TOKEN}` 헤더 필수. 토큰 미설정 시 모든 요청 401.
+타이밍 공격 방지를 위해 `crypto.timingSafeEqual` 비교.
+
+| Method | Path | Body | 응답 |
+|--------|------|------|------|
+| `POST` | `/api/notices` | `{ title, content, cron_expr, channel_id }` | 201 + 생성된 row / 400 (cron invalid 등) |
+| `GET` | `/api/notices` | — | 200 + 목록 |
+| `POST` | `/api/notices/:id/toggle` | — | 200 + 갱신된 row / 404 |
+
+### 3. 자연어 (`/ask` → toolRegistry)
+
+| 툴 | 입력 | 동작 |
+|----|------|------|
+| `schedule_notice` | `{ title, content, cron_expr, channel_id }` | `noticeService.create()` |
+| `list_notices` | — | `noticeService.list()` |
+| `toggle_notice` | `{ id }` | `noticeService.toggle()` |
+
+세 진입점 모두 DB만 갱신하고 — `noticeScheduler`가 매분 reload하므로 실제 cron 등록/해제는 1분 안에 반영된다.
+
 ## 구현 위치
 
-- `schedulers/noticeScheduler.ts` — 공지 cron 등록 진입점
+- `schedulers/noticeScheduler.ts` — 공지 cron 등록 진입점, 매분 reload
 - `services/noticeService.ts` — 공지 CRUD 유스케이스
 - `db/repositories/scheduledNoticeRepository.ts` — DB 접근
 - `commands/notice.ts` — 슬래시 커맨드 핸들러
+- `http/noticeApi.ts` — Bearer 인증 + REST 핸들러
+- `services/agent/toolRegistry.ts` — `schedule_notice` / `list_notices` / `toggle_notice` 툴 정의
 
 ## DB 스키마
 

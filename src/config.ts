@@ -35,6 +35,7 @@ export const config = {
   },
   http: {
     port: Number(process.env.HTTP_PORT ?? "3000"),
+    adminApiToken: process.env.ADMIN_API_TOKEN ?? "",
   },
   db: {
     path: process.env.DATABASE_PATH ?? "./data/bot.db",

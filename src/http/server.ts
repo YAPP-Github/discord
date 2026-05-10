@@ -1,6 +1,7 @@
 import express, { type Express } from "express";
 import { logger } from "../utils/logger.js";
 import { registerGoogleFormWebhook } from "./googleFormWebhook.js";
+import { registerNoticeApi } from "./noticeApi.js";
 import type { BotClient } from "../client.js";
 
 export function createHttpServer(client: BotClient): Express {
@@ -20,6 +21,7 @@ export function createHttpServer(client: BotClient): Express {
   });
 
   registerGoogleFormWebhook(app, client);
+  registerNoticeApi(app);
 
   return app;
 }

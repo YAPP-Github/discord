@@ -64,6 +64,9 @@ GitHub Organization 멤버 관리, Google Form 기반 프로비저닝, Google Ca
 - `GET /healthz` — 라이브니스
 - `POST /webhooks/google-form` — Apps Script가 보내는 폼 제출 이벤트 수신.
   `X-Signature` (HMAC-SHA256), `X-Timestamp` 검증 + 5분 허용창 + idempotency key
+- `POST /api/notices`, `GET /api/notices`, `POST /api/notices/:id/toggle` —
+  주기 공지 관리. `Authorization: Bearer ${ADMIN_API_TOKEN}` 필수
+  (timingSafeEqual 비교, 토큰 미설정 시 401)
 
 ### 스케줄러 (`src/schedulers/`)
 - `noticeScheduler` — DB의 활성 공지를 매분 reload, cron 표현식대로 채널에 게시
@@ -84,7 +87,7 @@ GitHub Organization 멤버 관리, Google Form 기반 프로비저닝, Google Ca
 |------|------|
 | `claude.ts` | Anthropic SDK 클라이언트 싱글톤 |
 | `agentService.ts` | LLM 플래닝 → 툴 실행 → 결과 요약 (Phase 6) |
-| `agent/toolRegistry.ts` | 에이전트가 호출 가능한 툴 정의 (`invite_github_user`, `create_github_repo`, `create_discord_channel`, `schedule_notice`, `list_calendar_events`) |
+| `agent/toolRegistry.ts` | 에이전트가 호출 가능한 툴 정의 (`invite_github_user`, `create_github_repo`, `create_discord_channel`, `schedule_notice`, `list_notices`, `toggle_notice`, `list_calendar_events`) |
 | `githubOrgService.ts` | GitHub Org 초대 / 레포 생성 |
 | `discordChannelService.ts` | 채널 생성 등 Discord 자원 조작 |
 | `noticeService.ts` | 주기 공지 CRUD + 발송 |
@@ -222,4 +225,4 @@ node-cron("0 9 * * *", TZ=Asia/Seoul)
 - **Anthropic** (`/ask` 사용 시): `ANTHROPIC_API_KEY`
 - **GitHub** (Org 자동화 사용 시): `GITHUB_TOKEN` (`admin:org`, `repo` 스코프), `GITHUB_ORG`, `GITHUB_TEMPLATE_OWNER`, `GITHUB_TEMPLATE_REPO`
 - **Google** (Form/Calendar 사용 시): `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_CALENDAR_IDS`, `GOOGLE_FORM_WEBHOOK_SECRET`
-- **HTTP/DB**: `HTTP_PORT`, `DATABASE_PATH`, `DISCORD_NOTICE_CHANNEL_ID`(캘린더 디지털 채널)
+- **HTTP/DB**: `HTTP_PORT`, `DATABASE_PATH`, `DISCORD_NOTICE_CHANNEL_ID`(캘린더 디지털 채널), `ADMIN_API_TOKEN`(`/api/notices` 인증 토큰)

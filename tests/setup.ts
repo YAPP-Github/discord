@@ -7,5 +7,6 @@ process.env.GOOGLE_FORM_WEBHOOK_SECRET =
   process.env.GOOGLE_FORM_WEBHOOK_SECRET ?? "test-webhook-secret";
 process.env.GITHUB_ORG = process.env.GITHUB_ORG ?? "test-org";
 process.env.HTTP_PORT = process.env.HTTP_PORT ?? "0";
+process.env.ADMIN_API_TOKEN = process.env.ADMIN_API_TOKEN ?? "test-admin-token";
 process.env.DATABASE_PATH = process.env.DATABASE_PATH ?? ":memory:";
 process.env.NODE_ENV = "test";

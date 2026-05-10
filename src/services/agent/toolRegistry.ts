@@ -91,6 +91,33 @@ export const tools: AgentToolDef[] = [
     },
   },
   {
+    name: "list_notices",
+    description: "List all registered recurring notices",
+    input_schema: {
+      type: "object",
+      properties: {},
+    },
+    handler: async () => {
+      return noticeService.list();
+    },
+  },
+  {
+    name: "toggle_notice",
+    description: "Enable or disable an existing notice by id",
+    input_schema: {
+      type: "object",
+      properties: {
+        id: { type: "number" },
+      },
+      required: ["id"],
+    },
+    handler: async (_client, args) => {
+      const row = noticeService.toggle(Number(args.id));
+      if (!row) throw new Error(`notice ${args.id} not found`);
+      return row;
+    },
+  },
+  {
     name: "list_calendar_events",
     description: "List today's calendar events for a calendar id",
     input_schema: {
