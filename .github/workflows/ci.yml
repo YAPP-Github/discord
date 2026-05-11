@@ -59,6 +59,9 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage
 
+      - name: Coverage ratchet
+        run: npm run coverage:ratchet
+
       - name: Upload coverage artifact
         if: always()
         uses: actions/upload-artifact@v4
