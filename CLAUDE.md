@@ -5,14 +5,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 명령어
 
 ```bash
-npm run dev              # 개발 모드 실행 (tsx watch, 자동 재시작)
-npm run build            # TypeScript 컴파일 → dist/
-npm start                # 프로덕션 실행 (빌드 후 사용)
-npm run deploy-commands  # Discord 슬래시 커맨드 등록 (길드 스코프)
-npm run lint             # ESLint 검사
-npm run lint:fix         # ESLint 자동 수정
-npm run typecheck        # tsc --noEmit (타입 검사만)
-npm run format:check     # Prettier 포맷 검사
+npm run dev               # 개발 모드 실행 (tsx watch, 자동 재시작)
+npm run build             # TypeScript 컴파일 → dist/
+npm start                 # 프로덕션 실행 (빌드 후 사용)
+npm run deploy-commands   # Discord 슬래시 커맨드 등록 (길드 스코프)
+npm run lint              # ESLint 검사
+npm run lint:fix          # ESLint 자동 수정
+npm run typecheck         # tsc --noEmit (타입 검사만)
+npm run format:check      # Prettier 포맷 검사
+npm run fetch-messages    # Discord → data/export/{channels,threads}/
+npm run consolidate-messages  # channels+threads → data/export/consolidated/
+npm run build-rag-chunks  # consolidated → data/export/rag/chunks.jsonl
+npm run embed-chunks      # chunks.jsonl → data/rag.db (OPENAI_API_KEY 필요)
 ```
 
 ## 아키텍처
@@ -75,6 +79,7 @@ interface Event {
 - [Claude API 서비스](docs/features/claude-service.md)
 - [Discord 메시지 수집 스크립트](docs/features/fetch-messages.md)
 - [채널·쓰레드 통합 스크립트](docs/features/consolidate-messages.md)
+- [RAG Ingestion 파이프라인 (implemented, 임베딩 단계 제외)](docs/features/rag-ingestion.md)
 - [YAPP 자동화 플랫폼 구현 계획](docs/features/automation-platform-plan.md)
   - [Phase 1: Layered Architecture 기반 자동화 셋업](docs/features/automation-foundation-setup.md)
   - [Phase 2: GitHub Organization 자동화](docs/features/automation-github-org.md)
@@ -86,3 +91,6 @@ interface Event {
 ### ADR
 아키텍처 의사결정 기록. 큰 기술적 결정이 있을 때만 작성한다.
 - [`docs/adr/`](docs/adr/)
+- [ADR-004 — Admin API 인증 방식 (draft)](docs/adr/004-admin-api-auth.md)
+- [ADR-005 — RAG 청킹·리트리벌 아키텍처 (accepted)](docs/adr/005-rag-chunking-strategy.md)
+- [ADR-006 — fetch-messages 파일명 충돌 대응 (draft)](docs/adr/006-fetch-filename-collision.md)

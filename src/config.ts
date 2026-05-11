@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 const envFile = process.env.NODE_ENV === "prod" ? ".env.prod" : ".env.local";
-dotenv.config({ path: envFile });
+// .env.* 가 시스템 env 보다 우선 — 셸에 stale OPENAI_API_KEY 등 leak 방지
+dotenv.config({ path: envFile, override: true });
 
 function required(key: string): string {
   const value = process.env[key];
