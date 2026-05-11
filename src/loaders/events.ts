@@ -9,7 +9,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export async function loadEvents(client: BotClient) {
   const eventsPath = join(__dirname, "..", "events");
   const files = readdirSync(eventsPath).filter(
-    (f) => f.endsWith(".ts") || f.endsWith(".js"),
+    (f) => (f.endsWith(".ts") || f.endsWith(".js")) && !f.endsWith(".d.ts"),
   );
 
   for (const file of files) {

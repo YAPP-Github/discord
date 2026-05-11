@@ -9,7 +9,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export async function loadCommands(client: BotClient) {
   const commandsPath = join(__dirname, "..", "commands");
   const files = readdirSync(commandsPath).filter(
-    (f) => f.endsWith(".ts") || f.endsWith(".js"),
+    (f) => (f.endsWith(".ts") || f.endsWith(".js")) && !f.endsWith(".d.ts"),
   );
 
   for (const file of files) {

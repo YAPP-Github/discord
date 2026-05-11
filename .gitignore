@@ -1,6 +1,8 @@
 node_modules/
 dist/
 data/*.db
+data/*.db-shm
+data/*.db-wal
 data/export/
 .env.local
 .env.prod
@@ -8,3 +10,4 @@ data/export/
 .DS_Store
 .mcp.json
 .idea/
+.omc/

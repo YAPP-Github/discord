@@ -1,0 +1,49 @@
+# 의존성 / 빌드 산출물
+node_modules
+dist
+*.tsbuildinfo
+
+# 환경 변수 (런타임에 외부에서 주입)
+.env
+.env.*
+!.env.example
+
+# 로컬 데이터 (볼륨으로 마운트)
+data
+*.db
+*.db-shm
+*.db-wal
+
+# Git / 메타
+.git
+.gitignore
+.gitattributes
+
+# 에디터 / OS
+.idea
+.vscode
+.DS_Store
+
+# 테스트 / 문서 / 도구 설정 (런타임 불필요)
+tests
+coverage
+docs
+*.md
+.eslintrc*
+eslint.config.*
+.prettierrc*
+.prettierignore
+vitest.config.*
+.husky
+.lintstagedrc*
+
+# CI / Docker
+.github
+Dockerfile
+.dockerignore
+
+# 기타
+.omc
+.claude
+logs
+*.log
