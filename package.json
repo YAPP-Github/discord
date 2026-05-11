@@ -25,7 +25,8 @@
     "consolidate-messages": "tsx src/scripts/consolidate-messages.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "coverage:ratchet": "tsx scripts/check-coverage-ratchet.ts"
   },
   "lint-staged": {
     "src/**/*.ts": [
