@@ -1,14 +1,42 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, ChannelType } from "discord.js";
 import type { Command } from "../types/index.js";
 import { search } from "../services/ragService.js";
 import { generateAnswer } from "../services/ragAnswerer.js";
 import { logger } from "../utils/logger.js";
 
 const MAX_DISCORD_REPLY = 1900;
+const MAX_THREAD_NAME = 95;
+const THREAD_AUTO_ARCHIVE_MIN = 1440; // 24h
 
 function truncate(s: string, max: number): string {
   if (s.length <= max) return s;
   return s.slice(0, max - 3) + "...";
+}
+
+function canStartNewThread(type: ChannelType | undefined): boolean {
+  return (
+    type === ChannelType.GuildText || type === ChannelType.GuildAnnouncement
+  );
+}
+
+function isAlreadyInsideThread(type: ChannelType | undefined): boolean {
+  return (
+    type === ChannelType.PublicThread ||
+    type === ChannelType.PrivateThread ||
+    type === ChannelType.AnnouncementThread
+  );
+}
+
+function buildAnswerBody(args: {
+  query: string;
+  answer: string;
+  sources: string[];
+  includeQueryHeader: boolean;
+}): string {
+  const head = args.includeQueryHeader ? `**질문**: ${args.query}\n\n` : "";
+  const sourceBlock =
+    args.sources.length > 0 ? `\n\n**출처**\n${args.sources.join("\n")}` : "";
+  return `${head}${args.answer}${sourceBlock}`;
 }
 
 export default {
@@ -47,7 +75,14 @@ export default {
     const generation = interaction.options.getString("generation") ?? undefined;
     const category = interaction.options.getString("category") ?? undefined;
 
-    await interaction.deferReply({ ephemeral: true });
+    const channelType = interaction.channel?.type;
+    const startNewThread = canStartNewThread(channelType);
+    const insideThread = isAlreadyInsideThread(channelType);
+    // 공개 응답 가능 채널: 텍스트/공지 채널(스레드 생성) 또는 이미 스레드 안
+    const usePublicReply = startNewThread || insideThread;
+
+    await interaction.deferReply(usePublicReply ? {} : { ephemeral: true });
+
     try {
       const result = await search({
         query,
@@ -57,14 +92,12 @@ export default {
         },
       });
 
-      // 임베딩 API quota 초과 — 결제·잔액 문제 (관리자 개입 필요)
       if (result.embedding_status === "quota_exceeded") {
         await interaction.editReply(
           `⚠️ 임베딩 API 사용량 한도(quota)가 초과되었습니다. **관리자에게 문의해주세요.**`,
         );
         return;
       }
-      // 일시적 rate limit — 사용자가 잠시 후 재시도하면 해결
       if (result.embedding_status === "rate_limited") {
         await interaction.editReply(
           `⏳ 외부 API 호출이 일시적으로 제한되었습니다. 잠시 후 다시 시도해주세요.`,
@@ -77,7 +110,6 @@ export default {
         return;
       }
 
-      // LLM 으로 답변 생성 + 관련성 판단
       const answer = await generateAnswer(query, result.threads);
 
       if (!answer.is_relevant) {
@@ -88,7 +120,6 @@ export default {
         return;
       }
 
-      // 인용된 쓰레드만 출처로 표시
       const citedSet = new Set(answer.cited_indices);
       const sources = result.threads
         .map((t, i) => ({ t, i }))
@@ -98,12 +129,64 @@ export default {
           return `[${i + 1}] **${title}** — ${t.channel_name} (${t.generation ?? "-"})`;
         });
 
-      const body =
-        `**질문**: ${query}\n\n` +
-        `${answer.answer}\n\n` +
-        (sources.length > 0 ? `**출처**\n${sources.join("\n")}` : "");
+      // --- 응답 모드 분기 ---
 
-      await interaction.editReply(truncate(body, MAX_DISCORD_REPLY));
+      if (startNewThread) {
+        // 1) 채널에 질문 공개 — Discord 가 슬래시 invocation 을 헤더로 자동 표시하므로 본문은 짧게.
+        await interaction.editReply(
+          `❓ **${truncate(query, 200)}**\n_↓ 답변은 스레드에서 확인하세요._`,
+        );
+        // 2) 그 메시지에 스레드 생성 + 답변 전송
+        try {
+          const replyMsg = await interaction.fetchReply();
+          const thread = await replyMsg.startThread({
+            name: truncate(query, MAX_THREAD_NAME),
+            autoArchiveDuration: THREAD_AUTO_ARCHIVE_MIN,
+          });
+          await thread.send(
+            truncate(
+              buildAnswerBody({
+                query,
+                answer: answer.answer,
+                sources,
+                includeQueryHeader: false,
+              }),
+              MAX_DISCORD_REPLY,
+            ),
+          );
+        } catch (err) {
+          // 스레드 생성 실패 — 권한 없음 등. 답변을 같은 채널 follow-up 으로 발송.
+          logger.warn(
+            "[rag] thread creation failed, falling back to followUp:",
+            err,
+          );
+          await interaction.followUp({
+            content: truncate(
+              buildAnswerBody({
+                query,
+                answer: answer.answer,
+                sources,
+                includeQueryHeader: true,
+              }),
+              MAX_DISCORD_REPLY,
+            ),
+          });
+        }
+        return;
+      }
+
+      // 이미 스레드 안 / DM / 기타 → 현재 위치에서 그대로 공개 답변
+      await interaction.editReply(
+        truncate(
+          buildAnswerBody({
+            query,
+            answer: answer.answer,
+            sources,
+            includeQueryHeader: true,
+          }),
+          MAX_DISCORD_REPLY,
+        ),
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error("[rag] failed", err);
