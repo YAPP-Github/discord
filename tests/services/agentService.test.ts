@@ -10,6 +10,13 @@ vi.mock("../../src/services/claude.js", () => ({
 
 vi.mock("../../src/services/githubOrgService.js", () => ({
   inviteUser: vi.fn().mockResolvedValue({ status: "invited", username: "x" }),
+  inviteMany: vi.fn().mockResolvedValue({
+    invited: [],
+    already_member: [],
+    already_invited: [],
+    user_not_found: [],
+    failed: [],
+  }),
   createRepo: vi.fn().mockResolvedValue({ status: "created", url: "u" }),
 }));
 
@@ -18,6 +25,7 @@ vi.mock("../../src/services/discordChannelService.js", () => ({
   splitMessage: vi.fn(),
   createTextChannel: vi.fn().mockResolvedValue({ id: "ch1", name: "x" }),
   createRole: vi.fn(),
+  fetchThreadMessages: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("../../src/services/noticeService.js", () => ({
@@ -251,6 +259,75 @@ describe("agentService.run", () => {
     expect(noticeService.setEnabled).toHaveBeenNthCalledWith(1, 11, false);
     expect(noticeService.setEnabled).toHaveBeenNthCalledWith(2, 22, false);
     expect(result.summary).toBe("2개 비활성화 완료");
+  });
+
+  it("routes read_thread_messages tool_use to fetchThreadMessages and filters bots", async () => {
+    vi.mocked(channelService.fetchThreadMessages).mockResolvedValueOnce([
+      { author_id: "u1", author_name: "koo", content: "github: koo", bot: false },
+      { author_id: "b1", author_name: "bot", content: "noise", bot: true },
+    ]);
+    messagesCreate.mockResolvedValueOnce({
+      stop_reason: "tool_use",
+      content: [
+        {
+          type: "tool_use",
+          id: "t1",
+          name: "read_thread_messages",
+          input: { thread_id: "ch123", limit: 50 },
+        },
+      ],
+    });
+    messagesCreate.mockResolvedValueOnce(terminatingResponse("읽었습니다"));
+
+    const result = await agentService.run(FAKE_CLIENT, "u1", "메시지 읽어줘");
+    expect(channelService.fetchThreadMessages).toHaveBeenCalledWith(
+      FAKE_CLIENT,
+      "ch123",
+      50,
+    );
+    expect(result.tool_results[0].status).toBe("ok");
+    expect(result.tool_results[0].detail).toEqual([
+      { author_id: "u1", author_name: "koo", content: "github: koo", bot: false },
+    ]);
+  });
+
+  it("routes invite_github_users tool_use to githubService.inviteMany", async () => {
+    vi.mocked(githubService.inviteMany).mockResolvedValueOnce({
+      invited: ["alice"],
+      already_member: ["bob"],
+      already_invited: [],
+      user_not_found: [],
+      failed: [],
+    });
+    messagesCreate.mockResolvedValueOnce({
+      stop_reason: "tool_use",
+      content: [
+        {
+          type: "tool_use",
+          id: "t1",
+          name: "invite_github_users",
+          input: { usernames: ["alice", "bob"] },
+        },
+      ],
+    });
+    messagesCreate.mockResolvedValueOnce(terminatingResponse("초대 완료"));
+
+    const result = await agentService.run(FAKE_CLIENT, "u1", "초대해줘");
+    expect(githubService.inviteMany).toHaveBeenCalledWith(["alice", "bob"]);
+    expect(result.tool_results[0]).toMatchObject({
+      tool: "invite_github_users",
+      status: "ok",
+    });
+  });
+
+  it("injects channelId into system prompt when provided", async () => {
+    messagesCreate.mockResolvedValueOnce(terminatingResponse("done"));
+    await agentService.run(FAKE_CLIENT, "u1", "hello", { channelId: "ch999" });
+    expect(messagesCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining("ch999"),
+      }),
+    );
   });
 
   it("marks status failed when iteration limit is hit while still calling tools", async () => {

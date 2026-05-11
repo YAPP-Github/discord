@@ -19,6 +19,7 @@ export default {
         interaction.client as BotClient,
         interaction.user.id,
         prompt,
+        { channelId: interaction.channelId },
       );
       const stepsBody =
         res.tool_results.length === 0

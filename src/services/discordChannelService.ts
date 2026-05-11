@@ -66,3 +66,30 @@ export async function createRole(
   const role = await guild.roles.create({ name });
   return { id: role.id, name: role.name };
 }
+
+export interface ThreadMessage {
+  author_id: string;
+  author_name: string;
+  content: string;
+  bot: boolean;
+}
+
+export async function fetchThreadMessages(
+  client: BotClient,
+  channelId: string,
+  limit: number = 100,
+): Promise<ThreadMessage[]> {
+  const channel = await client.channels.fetch(channelId);
+  if (!channel || !channel.isTextBased() || !("messages" in channel)) {
+    throw new Error(`Channel not readable: ${channelId}`);
+  }
+  const fetched = await channel.messages.fetch({ limit });
+  return Array.from(fetched.values())
+    .reverse()
+    .map((m) => ({
+      author_id: m.author.id,
+      author_name: m.author.username,
+      content: m.content,
+      bot: m.author.bot,
+    }));
+}

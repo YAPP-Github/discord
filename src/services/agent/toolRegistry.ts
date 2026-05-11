@@ -32,6 +32,54 @@ export const tools: AgentToolDef[] = [
     },
   },
   {
+    name: "invite_github_users",
+    description:
+      "GitHub username 목록을 받아 YAPP Org에 일괄 초대. 사전에 멤버/대기 초대 목록을 GitHub에서 조회하여 이미 멤버이거나 대기 중인 사람은 자동 제외 (멱등). 동일 호출을 반복해도 새 사람만 초대된다.",
+    input_schema: {
+      type: "object",
+      properties: {
+        usernames: {
+          type: "array",
+          items: { type: "string" },
+          description: "GitHub username 배열 (@ 접두사는 무시)",
+        },
+      },
+      required: ["usernames"],
+    },
+    handler: async (_client, args) => {
+      const raw = Array.isArray(args.usernames) ? args.usernames : [];
+      return githubService.inviteMany(raw.map((u) => String(u)));
+    },
+  },
+  {
+    name: "read_thread_messages",
+    description:
+      "Discord 스레드/채널의 최근 메시지를 시간순으로 조회. 메시지 내용에서 GitHub username 등을 추출할 때 사용. thread_id 는 사용자가 현재 명령을 입력한 채널 ID 를 기본으로 한다.",
+    input_schema: {
+      type: "object",
+      properties: {
+        thread_id: {
+          type: "string",
+          description: "Discord 스레드/채널 ID",
+        },
+        limit: {
+          type: "number",
+          description: "최근 N개. 기본 100, 최대 100.",
+        },
+      },
+      required: ["thread_id"],
+    },
+    handler: async (client, args) => {
+      const limit = Math.min(Number(args.limit ?? 100) || 100, 100);
+      const messages = await channelService.fetchThreadMessages(
+        client,
+        String(args.thread_id),
+        limit,
+      );
+      return messages.filter((m) => !m.bot);
+    },
+  },
+  {
     name: "create_github_repo",
     description: "Create a repository under the YAPP organization",
     input_schema: {

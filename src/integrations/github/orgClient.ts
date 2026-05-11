@@ -52,6 +52,39 @@ export async function createOrgInvitation(
   await octokit().orgs.createInvitation({ org, invitee_id: user.id });
 }
 
+export async function createInvitationByUserId(
+  org: string,
+  inviteeId: number,
+): Promise<void> {
+  await octokit().orgs.createInvitation({ org, invitee_id: inviteeId });
+}
+
+export async function listMembers(org: string): Promise<string[]> {
+  const res = await octokit().paginate(octokit().orgs.listMembers, {
+    org,
+    per_page: 100,
+  });
+  return res.map((m) => m.login.toLowerCase());
+}
+
+export interface PendingInvitation {
+  login: string | null;
+  email: string | null;
+}
+
+export async function listPendingInvitations(
+  org: string,
+): Promise<PendingInvitation[]> {
+  const res = await octokit().paginate(octokit().orgs.listPendingInvitations, {
+    org,
+    per_page: 100,
+  });
+  return res.map((inv) => ({
+    login: inv.login ? inv.login.toLowerCase() : null,
+    email: inv.email ?? null,
+  }));
+}
+
 export interface CreateRepoInput {
   org: string;
   name: string;

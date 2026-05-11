@@ -22,6 +22,72 @@ export async function inviteUser(username: string): Promise<InviteResult> {
   return { status: "invited", username: cleaned };
 }
 
+export interface BulkInviteResult {
+  invited: string[];
+  already_member: string[];
+  already_invited: string[];
+  user_not_found: string[];
+  failed: { username: string; reason: string }[];
+}
+
+export async function inviteMany(
+  usernames: string[],
+): Promise<BulkInviteResult> {
+  const result: BulkInviteResult = {
+    invited: [],
+    already_member: [],
+    already_invited: [],
+    user_not_found: [],
+    failed: [],
+  };
+
+  const cleaned = Array.from(
+    new Set(
+      usernames
+        .map((u) => u.trim().replace(/^@/, "").toLowerCase())
+        .filter((u) => u.length > 0),
+    ),
+  );
+  if (cleaned.length === 0) return result;
+
+  const org = config.github.org;
+  const [members, pending] = await Promise.all([
+    orgClient.listMembers(org),
+    orgClient.listPendingInvitations(org),
+  ]);
+  const memberSet = new Set(members);
+  const pendingLogins = new Set(
+    pending.map((p) => p.login).filter((l): l is string => l !== null),
+  );
+
+  for (const username of cleaned) {
+    if (memberSet.has(username)) {
+      result.already_member.push(username);
+      continue;
+    }
+    if (pendingLogins.has(username)) {
+      result.already_invited.push(username);
+      continue;
+    }
+    try {
+      const user = await orgClient.getUser(username);
+      if (!user) {
+        result.user_not_found.push(username);
+        continue;
+      }
+      await orgClient.createInvitationByUserId(org, user.id);
+      result.invited.push(user.login);
+    } catch (err) {
+      result.failed.push({
+        username,
+        reason: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  return result;
+}
+
 export interface CreateRepoOptions {
   name: string;
   private?: boolean;

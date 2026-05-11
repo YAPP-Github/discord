@@ -28,10 +28,15 @@ export interface AgentRunResult {
   summary: string;
 }
 
+export interface RunOptions {
+  channelId?: string;
+}
+
 export async function run(
   client: BotClient,
   actorDiscordId: string | null,
   inputText: string,
+  options: RunOptions = {},
 ): Promise<AgentRunResult> {
   const session = repo.createSession(actorDiscordId, inputText);
   const claude = getClaudeClient();
@@ -40,6 +45,10 @@ export async function run(
     description: t.description,
     input_schema: t.input_schema as Anthropic.Tool.InputSchema,
   }));
+
+  const systemPrompt = options.channelId
+    ? `${SYSTEM_PROMPT} 현재 사용자가 명령을 입력한 채널/스레드 ID 는 '${options.channelId}' 이다. 툴이 thread_id 를 받을 때 이 값을 기본으로 사용하라.`
+    : SYSTEM_PROMPT;
 
   const messages: Anthropic.MessageParam[] = [
     { role: "user", content: inputText },
@@ -53,7 +62,7 @@ export async function run(
     const res = await claude.messages.create({
       model: MODEL,
       max_tokens: MAX_TOKENS,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       tools: toolDefs,
       messages,
     });
