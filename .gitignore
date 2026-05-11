@@ -11,3 +11,4 @@ data/export/
 .mcp.json
 .idea/
 .omc/
+.worktrees/
