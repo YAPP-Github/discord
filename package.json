@@ -24,7 +24,9 @@
     "fetch-messages:prod": "NODE_ENV=prod tsx src/scripts/fetch-messages.ts",
     "consolidate-messages": "tsx src/scripts/consolidate-messages.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "coverage:ratchet": "tsx scripts/check-coverage-ratchet.ts"
   },
   "lint-staged": {
     "src/**/*.ts": [
@@ -49,6 +51,7 @@
     "@types/node": "^22.0.0",
     "@types/node-cron": "^3.0.11",
     "@types/supertest": "^7.2.0",
+    "@vitest/coverage-v8": "^4.1.5",
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",

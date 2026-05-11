@@ -70,6 +70,7 @@ interface Event {
 
 - [Ping 커맨드](docs/features/ping.md)
 - [CI 파이프라인](docs/features/ci-pipeline.md)
+- [Test Coverage 도입](docs/features/test-coverage.md)
 - [Discord 커맨드 자동 배포](docs/features/deploy-commands.md)
 - [Claude API 서비스](docs/features/claude-service.md)
 - [Discord 메시지 수집 스크립트](docs/features/fetch-messages.md)
