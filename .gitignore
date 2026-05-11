@@ -12,3 +12,4 @@ data/export/
 .idea/
 .omc/
 .worktrees/
+coverage/
